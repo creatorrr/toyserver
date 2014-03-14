@@ -84,10 +84,10 @@ func (m *Model) Collection() (a string) {
 	return
 }
 
-func (m *Model) Get() (q chan bool) {
+func (m *Model) Get() <-chan bool {
 	defer catch()
 
-	q = make(chan bool, 1)
+	q := make(chan bool, 1)
 
 	go func() {
 		defer close(q)
@@ -100,13 +100,13 @@ func (m *Model) Get() (q chan bool) {
 		q <- (e == nil && jsonE == nil)
 	}()
 
-	return
+	return q
 }
 
-func (m *Model) Save() (q chan bool) {
+func (m *Model) Save() <-chan bool {
 	defer catch()
 
-	q = make(chan bool, 1)
+	q := make(chan bool, 1)
 
 	go func() {
 		defer close(q)
@@ -119,13 +119,13 @@ func (m *Model) Save() (q chan bool) {
 		q <- (e == nil && jsonE == nil)
 	}()
 
-	return
+	return q
 }
 
-func (m *Model) Delete() (q chan bool) {
+func (m *Model) Delete() <-chan bool {
 	defer catch()
 
-	q = make(chan bool, 1)
+	q := make(chan bool, 1)
 
 	go func() {
 		defer close(q)
@@ -137,5 +137,5 @@ func (m *Model) Delete() (q chan bool) {
 		q <- (e == nil)
 	}()
 
-	return
+	return q
 }
