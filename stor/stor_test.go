@@ -37,6 +37,8 @@ func randStr(l int) string {
 }
 
 func TestModel(t *testing.T) {
+	var e error
+
 	// Make sure model has correct collection name.
 	coll := m.Collection()
 	if coll != "Sessions" {
@@ -48,14 +50,14 @@ func TestModel(t *testing.T) {
 	m.Data["str"] = dat
 
 	// Blocking call.
-	if !(<-m.Save()) {
+	if e = <-m.Save(); e != nil {
 		t.Errorf("Model not saved.")
 		return
 	}
 
 	// Now reset model and get value.
 	delete(m.Data, "str")
-	if !(<-m.Get()) {
+	if e = <-m.Get(); e != nil {
 		t.Errorf("Model not fetched.")
 	}
 
@@ -64,7 +66,7 @@ func TestModel(t *testing.T) {
 	}
 
 	// Finally delete key.
-	if !(<-m.Delete()) {
+	if e = <-m.Delete(); e != nil {
 		t.Errorf("Model not deleted.")
 	}
 }

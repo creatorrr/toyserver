@@ -37,9 +37,9 @@ type Model struct {
 type Modeler interface {
 	Collection() string
 
-	Get() chan bool
-	Save() chan bool
-	Delete() chan bool
+	Get() chan error
+	Save() chan error
+	Delete() chan error
 }
 
 type Jsoner interface {
@@ -84,48 +84,62 @@ func (m *Model) Collection() (a string) {
 	return
 }
 
-func (m *Model) Get() <-chan bool {
+func (m *Model) Get() <-chan error {
 	defer catch()
 
-	q := make(chan bool, 1)
+	q := make(chan error, 1)
 
 	go func() {
 		defer close(q)
 
 		// Get object from dal.
 		val, e := DAL.Get(m.Collection(), m.Key)
+
+		if e != nil {
+			q <- e
+			return
+		}
+
+		// Set data value.
 		jsonE := m.SetValue([]byte(val.String()))
 
 		// Send notification on channel.
-		q <- (e == nil && jsonE == nil)
+		q <- jsonE
 	}()
 
 	return q
 }
 
-func (m *Model) Save() <-chan bool {
+func (m *Model) Save() <-chan error {
 	defer catch()
 
-	q := make(chan bool, 1)
+	q := make(chan error, 1)
 
 	go func() {
 		defer close(q)
 
 		// Get json value of object.
 		val, jsonE := m.Json()
+
+		if jsonE != nil {
+			q <- jsonE
+			return
+		}
+
+		// Save value.
 		e := DAL.Put(m.Collection(), m.Key, strings.NewReader(string(val)))
 
 		// Send notification on channel.
-		q <- (e == nil && jsonE == nil)
+		q <- e
 	}()
 
 	return q
 }
 
-func (m *Model) Delete() <-chan bool {
+func (m *Model) Delete() <-chan error {
 	defer catch()
 
-	q := make(chan bool, 1)
+	q := make(chan error, 1)
 
 	go func() {
 		defer close(q)
@@ -134,7 +148,7 @@ func (m *Model) Delete() <-chan bool {
 		e := DAL.Put(m.Collection(), m.Key, strings.NewReader("{}"))
 
 		// Send notification on channel.
-		q <- (e == nil)
+		q <- e
 	}()
 
 	return q
