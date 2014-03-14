@@ -44,7 +44,7 @@ type Modeler interface {
 
 type Jsoner interface {
 	Json() []byte
-	SetValue([]byte) bool
+	SetValue([]byte) error
 }
 
 // Model implements Jsoner interface
