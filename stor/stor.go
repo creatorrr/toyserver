@@ -25,15 +25,7 @@ func init() {
 	DAL = orchestrate.NewClient(apiKey)
 }
 
-// Define data types.
-type Data map[string]interface{}
-
-type Model struct {
-	Key  string
-	Data Data
-	Type string
-}
-
+// Define interfaces.
 type Modeler interface {
 	Collection() string
 
@@ -47,8 +39,25 @@ type Jsoner interface {
 	SetValue([]byte) error
 }
 
+// Define data types.
+type User struct {
+	Name string `json:"name"`
+	Id   string `json:"id"`
+}
+
+type SessionData struct {
+	AppData map[string]interface{} `json:"appData"`
+	Members []User                 `json:"members"`
+}
+
+type Session struct {
+	Key  string
+	Data *SessionData
+	Type string
+}
+
 // Model implements Jsoner interface
-func (m *Model) Json() (v []byte, err error) {
+func (m *Session) Json() (v []byte, err error) {
 	if v, err = json.Marshal(m.Data); err != nil {
 		return nil, err
 	}
@@ -56,7 +65,7 @@ func (m *Model) Json() (v []byte, err error) {
 	return
 }
 
-func (m *Model) SetValue(s []byte) error {
+func (m *Session) SetValue(s []byte) error {
 	if e := json.Unmarshal(s, &m.Data); e != nil {
 		return e
 	}
@@ -73,7 +82,7 @@ func catch() {
 	}
 }
 
-func (m *Model) Collection() (a string) {
+func (m *Session) Collection() (a string) {
 	a = m.Type
 
 	// Capitalize name.
@@ -84,7 +93,7 @@ func (m *Model) Collection() (a string) {
 	return
 }
 
-func (m *Model) Get() <-chan error {
+func (m *Session) Get() <-chan error {
 	defer catch()
 
 	q := make(chan error, 1)
@@ -110,7 +119,7 @@ func (m *Model) Get() <-chan error {
 	return q
 }
 
-func (m *Model) Save() <-chan error {
+func (m *Session) Save() <-chan error {
 	defer catch()
 
 	q := make(chan error, 1)
@@ -136,7 +145,7 @@ func (m *Model) Save() <-chan error {
 	return q
 }
 
-func (m *Model) Delete() <-chan error {
+func (m *Session) Delete() <-chan error {
 	defer catch()
 
 	q := make(chan error, 1)

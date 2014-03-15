@@ -13,9 +13,12 @@ const (
 	key string = "alice"
 )
 
-var m = &Model{
+var m = &Session{
 	key,
-	make(map[string]interface{}),
+	&SessionData{
+		make(map[string]interface{}),
+		make([]User, 5),
+	},
 	"session",
 }
 
@@ -36,13 +39,13 @@ func randStr(l int) string {
 	return string(bytes)
 }
 
-func TestModel(t *testing.T) {
+func TestSession(t *testing.T) {
 	var (
 		e error
 
-		// Make sure Model implements Jsoner and Modeler.
-		_ Modeler = &Model{}
-		_ Jsoner  = &Model{}
+		// Make sure Session implements Jsoner and Modeler.
+		_ Modeler = &Session{}
+		_ Jsoner  = &Session{}
 	)
 
 	// Make sure model has correct collection name.
@@ -53,26 +56,26 @@ func TestModel(t *testing.T) {
 
 	// Set up model and save it.
 	dat := randStr(25)
-	m.Data["str"] = dat
+	m.Data.AppData["str"] = dat
 
 	// Blocking call.
 	if e = <-m.Save(); e != nil {
-		t.Errorf("Model not saved.")
+		t.Errorf("Session not saved.")
 		return
 	}
 
 	// Now reset model and get value.
-	delete(m.Data, "str")
+	delete(m.Data.AppData, "str")
 	if e = <-m.Get(); e != nil {
-		t.Errorf("Model not fetched.")
+		t.Errorf("Session not fetched.")
 	}
 
-	if m.Data["str"] != dat {
-		t.Errorf("Incorrect data:", m.Data["str"])
+	if m.Data.AppData["str"] != dat {
+		t.Errorf("Incorrect data:", m.Data.AppData["str"])
 	}
 
 	// Finally delete key.
 	if e = <-m.Delete(); e != nil {
-		t.Errorf("Model not deleted.")
+		t.Errorf("Session not deleted.")
 	}
 }
