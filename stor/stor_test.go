@@ -37,7 +37,13 @@ func randStr(l int) string {
 }
 
 func TestModel(t *testing.T) {
-	var e error
+	var (
+		e error
+
+		// Make sure Model implements Jsoner and Modeler.
+		_ Modeler = &Model{}
+		_ Jsoner  = &Model{}
+	)
 
 	// Make sure model has correct collection name.
 	coll := m.Collection()

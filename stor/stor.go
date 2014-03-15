@@ -37,13 +37,13 @@ type Model struct {
 type Modeler interface {
 	Collection() string
 
-	Get() chan error
-	Save() chan error
-	Delete() chan error
+	Get() <-chan error
+	Save() <-chan error
+	Delete() <-chan error
 }
 
 type Jsoner interface {
-	Json() []byte
+	Json() ([]byte, error)
 	SetValue([]byte) error
 }
 
