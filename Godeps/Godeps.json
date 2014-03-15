@@ -1,5 +1,13 @@
 {
 	"ImportPath": "github.com/creatorrr/toyserver",
 	"GoVersion": "go1.1.2",
-	"Deps": []
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/creatorrr/orchestrate-go-client",
+			"Rev": "c4967a0a75120eb9f845f25c8bad4b194d83bab6"
+		}
+	]
 }

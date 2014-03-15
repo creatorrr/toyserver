@@ -10,7 +10,7 @@ import (
 
 	"encoding/json"
 
-	orchestrate "github.com/orchestrate-io/orchestrate-go-client"
+	orchestrate "github.com/creatorrr/orchestrate-go-client"
 )
 
 // Set up orchestrate client
@@ -154,7 +154,7 @@ func (m *Session) Delete() <-chan error {
 		defer close(q)
 
 		// Delete key.
-		e := DAL.Put(m.Collection(), m.Key, strings.NewReader("{}"))
+		e := DAL.Delete(m.Collection(), m.Key)
 
 		// Send notification on channel.
 		q <- e
