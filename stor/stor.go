@@ -97,6 +97,7 @@ func init() {
 }
 
 func Start() {
+	var tr *transaction
 	trs := make(map[string]*transaction)
 
 	// Distribute work
@@ -107,18 +108,20 @@ func Start() {
 		// Add new transaction if it doesn't exist.
 		if _, ok := trs[trKey]; !ok {
 			trs[trKey] = &transaction{
-				make(chan *work, 1),
+				make(chan *work, 100),
 				false,
 			}
 		}
 
+		tr = trs[trKey]
+
 		// Start transaction goroutine.
-		if !trs[trKey].working {
-			go trs[trKey].Work()
+		if !tr.working {
+			go tr.Work()
 		}
 
 		// Push work to new transaction.
-		trs[trKey].Queue <- w
+		tr.Queue <- w
 	}
 
 	// Clean up.

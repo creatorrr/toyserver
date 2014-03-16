@@ -44,6 +44,7 @@ func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 }
 
+// TODO: Test non blocking operations.
 func TestSession(t *testing.T) {
 	var (
 		e error
@@ -89,3 +90,5 @@ func TestSession(t *testing.T) {
 	// Shut down.
 	Shutdown()
 }
+
+// TODO: Add simple benchmarks for operations.
