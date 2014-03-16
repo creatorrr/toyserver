@@ -13,42 +13,45 @@ import (
 	orchestrate "github.com/creatorrr/orchestrate-go-client"
 )
 
-// TODO: Combine type declarations.
 // Define interfaces.
-type jsoner interface {
-	Json() ([]byte, error)
-	SetValue([]byte) error
-}
+type (
+	jsoner interface {
+		Json() ([]byte, error)
+		SetValue([]byte) error
+	}
 
-type Modeler interface {
-	jsoner
-	Collection() string
+	Modeler interface {
+		jsoner
+		Collection() string
 
-	Get() <-chan error
-	Save() <-chan error
-	Delete() <-chan error
-}
+		Get() <-chan error
+		Save() <-chan error
+		Delete() <-chan error
+	}
 
-type worker interface {
-	Work()
-}
+	worker interface {
+		Work()
+	}
+)
 
 // Define data types.
-type User struct {
-	Name string `json:"name"`
-	Id   string `json:"id"`
-}
+type (
+	User struct {
+		Name string `json:"name"`
+		Id   string `json:"id"`
+	}
 
-type SessionData struct {
-	AppData map[string]interface{} `json:"appData"`
-	Members []User                 `json:"members"`
-}
+	SessionData struct {
+		AppData map[string]interface{} `json:"appData"`
+		Members []User                 `json:"members"`
+	}
 
-type Session struct {
-	Key  string
-	Data *SessionData
-	Type string
-}
+	Session struct {
+		Key  string
+		Data *SessionData
+		Type string
+	}
+)
 
 // Define work and worker.
 const (
@@ -58,15 +61,17 @@ const (
 )
 
 // TODO: Make Payload accept Modeler
-type work struct {
-	Type    int
-	Payload *Session
-	Notif   *chan error
-}
+type (
+	work struct {
+		Type    int
+		Payload *Session
+		Notif   *chan error
+	}
 
-type transaction struct {
-	Queue chan *work
-}
+	transaction struct {
+		Queue chan *work
+	}
+)
 
 // Set up client and event loop.
 var (
