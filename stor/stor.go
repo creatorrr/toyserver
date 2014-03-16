@@ -88,39 +88,38 @@ func init() {
 	dal = orchestrate.NewClient(apiKey)
 	workQueue = make(chan *work, 1)
 
-	// TODO: Abstract the goroutine to expose a Start() method on package.
 	// Set up event loop.
-	go func() {
-		trs := make(map[string]*transaction)
+	go Start()
+}
 
-		for w := range workQueue {
-			m := w.Payload
-			trKey := m.Collection() + "/" + m.Key
+func Start() {
+	trs := make(map[string]*transaction)
 
-			// Add new transaction if it doesn't exist.
-			if _, ok := trs[trKey]; !ok {
-				trs[trKey] = &transaction{
-					make(chan *work, 1),
-				}
+	for w := range workQueue {
+		m := w.Payload
+		trKey := m.Collection() + "/" + m.Key
 
-				go trs[trKey].Work()
+		// Add new transaction if it doesn't exist.
+		if _, ok := trs[trKey]; !ok {
+			trs[trKey] = &transaction{
+				make(chan *work, 1),
 			}
 
-			// Push work to new transaction.
-			trs[trKey].Queue <- w
+			go trs[trKey].Work()
 		}
 
-		// Clean up.
-		for _, tr := range trs {
-			close(tr.Queue)
-		}
-	}()
+		// Push work to new transaction.
+		trs[trKey].Queue <- w
+	}
+
+	// Clean up.
+	for _, tr := range trs {
+		close(tr.Queue)
+	}
 }
 
 func Shutdown() {
-	if workQueue != nil {
-		close(workQueue)
-	}
+	defer close(workQueue)
 
 	// Add other cleanup code here.
 }
