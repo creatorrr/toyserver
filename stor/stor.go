@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"encoding/json"
 
@@ -69,7 +70,8 @@ type (
 	}
 
 	transaction struct {
-		Queue chan *work
+		Queue   chan *work
+		working bool
 	}
 )
 
@@ -77,6 +79,8 @@ type (
 var (
 	dal       *orchestrate.Client
 	workQueue chan *work
+
+	workerLifeSpan = time.Hour * 2
 )
 
 func init() {
@@ -95,6 +99,7 @@ func init() {
 func Start() {
 	trs := make(map[string]*transaction)
 
+	// Distribute work
 	for w := range workQueue {
 		m := w.Payload
 		trKey := m.Collection() + "/" + m.Key
@@ -103,8 +108,12 @@ func Start() {
 		if _, ok := trs[trKey]; !ok {
 			trs[trKey] = &transaction{
 				make(chan *work, 1),
+				false,
 			}
+		}
 
+		// Start transaction goroutine.
+		if !trs[trKey].working {
 			go trs[trKey].Work()
 		}
 
@@ -126,7 +135,8 @@ func Shutdown() {
 
 // transaction implements worker interface
 func (t *transaction) Work() {
-	// TODO: timeout
+	timeout := time.After(workerLifeSpan)
+
 	for w := range t.Queue {
 		m := w.Payload
 
@@ -141,6 +151,16 @@ func (t *transaction) Work() {
 			*w.Notif <- dal.Delete(m.Collection(), m.Key)
 			close(*w.Notif)
 			// case GET: // Not implemented.
+		}
+
+		// Timeout goroutine to auto destroy after lifespan.
+		select {
+		case <-timeout:
+			t.working = false
+			return
+
+		default:
+			continue
 		}
 	}
 }
@@ -167,7 +187,10 @@ func (m *Session) SetValue(s []byte) error {
 // catch must be run deferred so it can recover from runtime panics
 func catch() {
 	if r := recover(); r != nil {
+		defer os.Exit(1)
+
 		log.Println("Panic occurred:", r)
+		Shutdown()
 	}
 }
 
