@@ -4,6 +4,7 @@ package stor_test
 
 import (
 	"math/rand"
+	"time"
 
 	. "github.com/creatorrr/toyserver/stor"
 	"testing"
@@ -39,13 +40,16 @@ func randStr(l int) string {
 	return string(bytes)
 }
 
+func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
+}
+
 func TestSession(t *testing.T) {
 	var (
 		e error
 
 		// Make sure Session implements Jsoner and Modeler.
 		_ Modeler = &Session{}
-		_ Jsoner  = &Session{}
 	)
 
 	// Make sure model has correct collection name.
@@ -68,14 +72,20 @@ func TestSession(t *testing.T) {
 	delete(m.Data.AppData, "str")
 	if e = <-m.Get(); e != nil {
 		t.Errorf("Session not fetched.")
+		return
 	}
 
 	if m.Data.AppData["str"] != dat {
 		t.Errorf("Incorrect data:", m.Data.AppData["str"])
+		return
 	}
 
 	// Finally delete key.
-	if e = <-m.Delete(); e != nil {
+	if e = <-(m.Delete()); e != nil {
 		t.Errorf("Session not deleted.")
+		return
 	}
+
+	// Shut down.
+	Shutdown()
 }

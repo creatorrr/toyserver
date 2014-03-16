@@ -13,20 +13,14 @@ import (
 	orchestrate "github.com/creatorrr/orchestrate-go-client"
 )
 
-// Set up orchestrate client
-var DAL *orchestrate.Client
-
-func init() {
-	apiKey := os.Getenv("ORCHESTRATE_API_KEY")
-	if apiKey == "" {
-		panic("Api key not found.")
-	}
-
-	DAL = orchestrate.NewClient(apiKey)
+// Define interfaces.
+type Jsoner interface {
+	Json() ([]byte, error)
+	SetValue([]byte) error
 }
 
-// Define interfaces.
 type Modeler interface {
+	Jsoner
 	Collection() string
 
 	Get() <-chan error
@@ -34,9 +28,8 @@ type Modeler interface {
 	Delete() <-chan error
 }
 
-type Jsoner interface {
-	Json() ([]byte, error)
-	SetValue([]byte) error
+type worker interface {
+	Work()
 }
 
 // Define data types.
@@ -54,6 +47,96 @@ type Session struct {
 	Key  string
 	Data *SessionData
 	Type string
+}
+
+// Define work and worker.
+const (
+	GET = iota
+	PUT
+	DELETE
+)
+
+// TODO: Make Payload accept Modeler
+type work struct {
+	Type    int
+	Payload *Session
+	Notif   *chan error
+}
+
+type transaction struct {
+	Queue chan *work
+}
+
+// Set up client and event loop.
+var (
+	DAL       *orchestrate.Client
+	workQueue chan *work
+)
+
+func init() {
+	apiKey := os.Getenv("ORCHESTRATE_API_KEY")
+	if apiKey == "" {
+		panic("Api key not found.")
+	}
+
+	DAL = orchestrate.NewClient(apiKey)
+	workQueue = make(chan *work, 1)
+
+	// Set up event loop.
+	go func() {
+		trs := make(map[string]*transaction)
+
+		for w := range workQueue {
+			m := w.Payload
+			trKey := m.Collection() + "/" + m.Key
+
+			// Add new transaction if it doesn't exist.
+			if _, ok := trs[trKey]; !ok {
+				trs[trKey] = &transaction{
+					make(chan *work, 1),
+				}
+
+				go trs[trKey].Work()
+			}
+
+			// Push work to new transaction.
+			trs[trKey].Queue <- w
+		}
+
+		// Clean up.
+		for _, tr := range trs {
+			close(tr.Queue)
+		}
+	}()
+}
+
+func Shutdown() {
+	if workQueue != nil {
+		close(workQueue)
+	}
+
+	// Add other cleanup code here.
+}
+
+// transaction implements worker interface
+func (t *transaction) Work() {
+	// TODO: timeout
+	for w := range t.Queue {
+		m := w.Payload
+
+		switch w.Type {
+		case PUT:
+			val, _ := m.Json()
+
+			*w.Notif <- DAL.Put(m.Collection(), m.Key, strings.NewReader(string(val)))
+			close(*w.Notif)
+
+		case DELETE:
+			*w.Notif <- DAL.Delete(m.Collection(), m.Key)
+			close(*w.Notif)
+			// case GET: // Not implemented.
+		}
+	}
 }
 
 // Model implements Jsoner interface
@@ -104,16 +187,16 @@ func (m *Session) Get() <-chan error {
 		// Get object from dal.
 		val, e := DAL.Get(m.Collection(), m.Key)
 
-		if e != nil {
-			q <- e
-			return
-		}
-
 		// Set data value.
 		jsonE := m.SetValue([]byte(val.String()))
 
-		// Send notification on channel.
-		q <- jsonE
+		if e != nil {
+			q <- e
+
+		} else {
+			// Send notification on channel.
+			q <- jsonE
+		}
 	}()
 
 	return q
@@ -124,23 +207,12 @@ func (m *Session) Save() <-chan error {
 
 	q := make(chan error, 1)
 
-	go func() {
-		defer close(q)
-
-		// Get json value of object.
-		val, jsonE := m.Json()
-
-		if jsonE != nil {
-			q <- jsonE
-			return
-		}
-
-		// Save value.
-		e := DAL.Put(m.Collection(), m.Key, strings.NewReader(string(val)))
-
-		// Send notification on channel.
-		q <- e
-	}()
+	// Feed to work queue.
+	workQueue <- &work{
+		PUT,
+		m,
+		&q,
+	}
 
 	return q
 }
@@ -150,15 +222,12 @@ func (m *Session) Delete() <-chan error {
 
 	q := make(chan error, 1)
 
-	go func() {
-		defer close(q)
-
-		// Delete key.
-		e := DAL.Delete(m.Collection(), m.Key)
-
-		// Send notification on channel.
-		q <- e
-	}()
+	// Feed to work queue.
+	workQueue <- &work{
+		DELETE,
+		m,
+		&q,
+	}
 
 	return q
 }
