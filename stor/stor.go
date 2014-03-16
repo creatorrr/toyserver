@@ -1,4 +1,4 @@
-// Package stor provides a simple DAL, creates models and abstract
+// Package stor provides a simple dal, creates models and abstract
 // access to backend data storage provider, in this case orchestrate.io.
 
 package stor
@@ -13,14 +13,15 @@ import (
 	orchestrate "github.com/creatorrr/orchestrate-go-client"
 )
 
+// TODO: Combine type declarations.
 // Define interfaces.
-type Jsoner interface {
+type jsoner interface {
 	Json() ([]byte, error)
 	SetValue([]byte) error
 }
 
 type Modeler interface {
-	Jsoner
+	jsoner
 	Collection() string
 
 	Get() <-chan error
@@ -69,7 +70,7 @@ type transaction struct {
 
 // Set up client and event loop.
 var (
-	DAL       *orchestrate.Client
+	dal       *orchestrate.Client
 	workQueue chan *work
 )
 
@@ -79,9 +80,10 @@ func init() {
 		panic("Api key not found.")
 	}
 
-	DAL = orchestrate.NewClient(apiKey)
+	dal = orchestrate.NewClient(apiKey)
 	workQueue = make(chan *work, 1)
 
+	// TODO: Abstract the goroutine to expose a Start() method on package.
 	// Set up event loop.
 	go func() {
 		trs := make(map[string]*transaction)
@@ -128,11 +130,11 @@ func (t *transaction) Work() {
 		case PUT:
 			val, _ := m.Json()
 
-			*w.Notif <- DAL.Put(m.Collection(), m.Key, strings.NewReader(string(val)))
+			*w.Notif <- dal.Put(m.Collection(), m.Key, strings.NewReader(string(val)))
 			close(*w.Notif)
 
 		case DELETE:
-			*w.Notif <- DAL.Delete(m.Collection(), m.Key)
+			*w.Notif <- dal.Delete(m.Collection(), m.Key)
 			close(*w.Notif)
 			// case GET: // Not implemented.
 		}
@@ -185,7 +187,7 @@ func (m *Session) Get() <-chan error {
 		defer close(q)
 
 		// Get object from dal.
-		val, e := DAL.Get(m.Collection(), m.Key)
+		val, e := dal.Get(m.Collection(), m.Key)
 
 		// Set data value.
 		jsonE := m.SetValue([]byte(val.String()))
