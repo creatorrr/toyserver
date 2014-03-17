@@ -9,20 +9,24 @@ import (
 	"strings"
 	"time"
 
-	"encoding/json"
-
 	orchestrate "github.com/creatorrr/orchestrate-go-client"
 )
 
 // Define interfaces.
 type (
-	jsoner interface {
+	Jsoner interface {
 		Json() ([]byte, error)
-		SetValue([]byte) error
+		SetJson([]byte) error
+	}
+
+	DataModeler interface {
+		Jsoner
+
+		GetValue() interface{}
+		SetValue(interface{}) error
 	}
 
 	Modeler interface {
-		jsoner
 		Collection() string
 
 		Get() <-chan error
@@ -37,19 +41,9 @@ type (
 
 // Define data types.
 type (
-	User struct {
-		Name string `json:"name"`
-		Id   string `json:"id"`
-	}
-
-	SessionData struct {
-		AppData map[string]interface{} `json:"appData"`
-		Members []User                 `json:"members"`
-	}
-
-	Session struct {
+	Model struct {
 		Key  string
-		Data *SessionData
+		Data DataModeler
 		Type string
 	}
 )
@@ -61,11 +55,10 @@ const (
 	DELETE
 )
 
-// TODO: Make Payload accept Modeler
 type (
 	work struct {
 		Type    int
-		Payload *Session
+		Payload *Model
 		Notif   *chan error
 	}
 
@@ -145,7 +138,7 @@ func (t *transaction) Work() {
 
 		switch w.Type {
 		case PUT:
-			val, _ := m.Json()
+			val, _ := m.Data.Json()
 
 			*w.Notif <- dal.Put(m.Collection(), m.Key, strings.NewReader(string(val)))
 			close(*w.Notif)
@@ -168,23 +161,6 @@ func (t *transaction) Work() {
 	}
 }
 
-// Model implements Jsoner interface
-func (m *Session) Json() (v []byte, err error) {
-	if v, err = json.Marshal(m.Data); err != nil {
-		return nil, err
-	}
-
-	return
-}
-
-func (m *Session) SetValue(s []byte) error {
-	if e := json.Unmarshal(s, &m.Data); e != nil {
-		return e
-	}
-
-	return nil
-}
-
 // Model implements Modeler interface
 
 // catch must be run deferred so it can recover from runtime panics
@@ -197,7 +173,7 @@ func catch() {
 	}
 }
 
-func (m *Session) Collection() (a string) {
+func (m *Model) Collection() (a string) {
 	a = m.Type
 
 	// Capitalize name.
@@ -208,7 +184,7 @@ func (m *Session) Collection() (a string) {
 	return
 }
 
-func (m *Session) Get() <-chan error {
+func (m *Model) Get() <-chan error {
 	defer catch()
 
 	q := make(chan error, 1)
@@ -220,7 +196,7 @@ func (m *Session) Get() <-chan error {
 		val, e := dal.Get(m.Collection(), m.Key)
 
 		// Set data value.
-		jsonE := m.SetValue([]byte(val.String()))
+		jsonE := m.Data.SetJson([]byte(val.String()))
 
 		if e != nil {
 			q <- e
@@ -234,7 +210,7 @@ func (m *Session) Get() <-chan error {
 	return q
 }
 
-func (m *Session) Save() <-chan error {
+func (m *Model) Save() <-chan error {
 	defer catch()
 
 	q := make(chan error, 1)
@@ -249,7 +225,7 @@ func (m *Session) Save() <-chan error {
 	return q
 }
 
-func (m *Session) Delete() <-chan error {
+func (m *Model) Delete() <-chan error {
 	defer catch()
 
 	q := make(chan error, 1)
