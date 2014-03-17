@@ -116,13 +116,13 @@ func TestModel(t *testing.T) {
 	}
 
 	v := m.Data.(*ModelData)
-	if (*v).AppData["str"] != dat {
-		t.Errorf("Incorrect data:", (*v).AppData["str"])
+	if v.AppData["str"] != dat {
+		t.Errorf("Incorrect data:", v.AppData["str"])
 		return
 	}
 
 	// Finally delete key.
-	if e = <-(m.Delete()); e != nil {
+	if e = <-m.Delete(); e != nil {
 		t.Errorf("Model not deleted.")
 		return
 	}

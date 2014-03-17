@@ -26,20 +26,14 @@ type (
 		Save() <-chan error
 		Delete() <-chan error
 	}
-
-	worker interface {
-		Work()
-	}
 )
 
 // Define data types.
-type (
-	Model struct {
-		Key  string
-		Data Jsoner
-		Type string
-	}
-)
+type Model struct {
+	Key  string
+	Data Jsoner
+	Type string
+}
 
 // Define work and worker.
 const (
@@ -130,6 +124,10 @@ func (t *transaction) Work() {
 		m := w.Payload
 
 		switch w.Type {
+		case GET:
+			// Not implemented.
+			continue
+
 		case PUT:
 			val, _ := m.Data.Json()
 
@@ -139,7 +137,6 @@ func (t *transaction) Work() {
 		case DELETE:
 			*w.Notif <- dal.Delete(m.Collection(), m.Key)
 			close(*w.Notif)
-			// case GET: // Not implemented.
 		}
 
 		// Timeout goroutine to auto destroy after lifespan.
