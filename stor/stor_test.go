@@ -3,7 +3,6 @@
 package stor_test
 
 import (
-	"errors"
 	"math/rand"
 	"time"
 
@@ -31,33 +30,13 @@ type (
 
 // ModelData implements Jsoner interface
 func (d *ModelData) Json() (v []byte, err error) {
-	if v, err = json.Marshal(d); err != nil {
-		return nil, err
-	}
-
+	v, err = json.Marshal(d)
 	return
 }
 
-func (d *ModelData) SetJson(s []byte) error {
-	if e := json.Unmarshal(s, &d); e != nil {
-		return e
-	}
-
-	return nil
-}
-
-// ModelData implements DataModeler interface
-func (d *ModelData) GetValue() interface{} {
-	return d
-}
-
-func (d *ModelData) SetValue(v interface{}) error {
-	if k, e := v.(*ModelData); e {
-		*d = *k
-		return nil
-	}
-
-	return errors.New("cannot convert value to ModelData")
+func (d *ModelData) SetJson(s []byte) (e error) {
+	e = json.Unmarshal(s, &d)
+	return
 }
 
 var m = &Model{
@@ -96,19 +75,19 @@ func TestModel(t *testing.T) {
 		e error
 
 		// Make sure Model implements Jsoner and Modeler.
-		_ Modeler     = &Model{}
-		_ DataModeler = &ModelData{}
+		_ Modeler = &Model{}
+		_ Jsoner  = &ModelData{}
 	)
 
 	// Make sure model has correct collection name.
 	coll := m.Collection()
 	if coll != "Sessions" {
-		t.Errorf("Wrong collection name", string(coll))
+		t.Errorf("Wrong collection name", coll)
 	}
 
 	// Set up model and save it.
 	dat := randStr(25)
-	e = m.Data.SetValue(&ModelData{
+	m.Data = Jsoner(&ModelData{
 		map[string]interface{}{"str": dat},
 		make([]User, 5),
 	})
@@ -130,13 +109,13 @@ func TestModel(t *testing.T) {
 	}
 
 	// Now reset model and get value.
-	m.Data.SetValue(&ModelData{})
+	m.Data = Jsoner(&ModelData{})
 	if e = <-m.Get(); e != nil {
 		t.Errorf("Model not fetched.")
 		return
 	}
 
-	v := m.Data.GetValue().(*ModelData)
+	v := m.Data.(*ModelData)
 	if (*v).AppData["str"] != dat {
 		t.Errorf("Incorrect data:", (*v).AppData["str"])
 		return

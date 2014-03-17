@@ -19,13 +19,6 @@ type (
 		SetJson([]byte) error
 	}
 
-	DataModeler interface {
-		Jsoner
-
-		GetValue() interface{}
-		SetValue(interface{}) error
-	}
-
 	Modeler interface {
 		Collection() string
 
@@ -43,7 +36,7 @@ type (
 type (
 	Model struct {
 		Key  string
-		Data DataModeler
+		Data Jsoner
 		Type string
 	}
 )
