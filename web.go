@@ -1,17 +1,24 @@
 package main
 
 import (
-	"fmt"
+	"html/template"
 	"net/http"
 	"os"
 )
 
 func hello(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintln(w, "hello dicks!")
+	t := template.Must(template.New("index").Parse(`
+    <title> Toy Server
+    <body>
+      Lady Gagagaagagaga..
+  `))
+
+	t.Execute(w, nil)
 }
 
 func main() {
 	http.HandleFunc("/", hello)
+	http.Handle("/static", http.FileServer(http.Dir("./static")))
 
 	if err := http.ListenAndServe(":"+os.Getenv("PORT"), nil); err != nil {
 		panic(err)
