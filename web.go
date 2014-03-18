@@ -7,13 +7,22 @@ import (
 )
 
 func hello(w http.ResponseWriter, req *http.Request) {
+	// Set HTTP headers.
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	// Parse template.
 	t := template.Must(template.New("index").Parse(`
-    <title> Toy Server
+  <html>
+    <title> Toy Server </title>
     <body>
-      Lady Gagagaagagaga..
+      Lady Gagagaagagaga...
+    </body>
+  </html>
   `))
 
-	t.Execute(w, nil)
+	if e := t.Execute(w, nil); e != nil {
+		panic("template render issue")
+	}
 }
 
 func main() {
