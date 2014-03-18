@@ -125,8 +125,14 @@ func (t *transaction) Work() {
 
 		switch w.Type {
 		case GET:
-			// Not implemented.
-			continue
+			// Get object from dal.
+			val, e := dal.Get(m.Collection(), m.Key)
+
+			if e == nil {
+				m.Data.SetJson([]byte(val.String()))
+			}
+
+			*w.Notif <- e
 
 		case PUT:
 			val, _ := m.Data.Json()
@@ -179,23 +185,12 @@ func (m *Model) Get() <-chan error {
 
 	q := make(chan error, 1)
 
-	go func() {
-		defer close(q)
-
-		// Get object from dal.
-		val, e := dal.Get(m.Collection(), m.Key)
-
-		// Set data value.
-		jsonE := m.Data.SetJson([]byte(val.String()))
-
-		if e != nil {
-			q <- e
-
-		} else {
-			// Send notification on channel.
-			q <- jsonE
-		}
-	}()
+	// Feed to work queue.
+	workQueue <- &work{
+		GET,
+		m,
+		&q,
+	}
 
 	return q
 }
