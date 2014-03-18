@@ -138,12 +138,13 @@ func (t *transaction) Work() {
 			val, _ := m.Data.Json()
 
 			*w.Notif <- dal.Put(m.Collection(), m.Key, strings.NewReader(string(val)))
-			close(*w.Notif)
 
 		case DELETE:
 			*w.Notif <- dal.Delete(m.Collection(), m.Key)
-			close(*w.Notif)
 		}
+
+		// Close notification channel.
+		close(*w.Notif)
 
 		// Timeout goroutine to auto destroy after lifespan.
 		select {
