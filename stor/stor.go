@@ -6,6 +6,7 @@ package stor
 import (
 	"log"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -159,6 +160,9 @@ func (t *transaction) Work() {
 		default:
 			continue
 		}
+
+		// Yield to processor to make sure no other goroutine is blocked.
+		runtime.Gosched()
 	}
 }
 
