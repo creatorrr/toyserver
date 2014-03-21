@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func hello(w http.ResponseWriter, req *http.Request) string {
+func hello(w http.ResponseWriter) string {
 	// Set HTTP headers.
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 

@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	orchestrate "github.com/creatorrr/orchestrate-go-client"
@@ -37,9 +38,9 @@ type Model struct {
 
 // Define work and worker.
 const (
-	GET = iota
-	PUT
-	DELETE
+	_GET = iota
+	_PUT
+	_DELETE
 )
 
 type (
@@ -60,6 +61,7 @@ var (
 	dal       *orchestrate.Client
 	workQueue chan *work
 
+	mutex          = &sync.Mutex{}
 	workerLifeSpan = time.Hour * 2
 )
 
@@ -124,22 +126,24 @@ func (t *transaction) Work() {
 		m := w.Payload
 
 		switch w.Type {
-		case GET:
+		case _GET:
 			// Get object from dal.
 			val, e := dal.Get(m.Collection(), m.Key)
 
 			if e == nil {
+				mutex.Lock()
 				m.Data.SetJson([]byte(val.String()))
+				mutex.Unlock()
 			}
 
 			*w.Notif <- e
 
-		case PUT:
+		case _PUT:
 			val, _ := m.Data.Json()
 
 			*w.Notif <- dal.Put(m.Collection(), m.Key, strings.NewReader(string(val)))
 
-		case DELETE:
+		case _DELETE:
 			*w.Notif <- dal.Delete(m.Collection(), m.Key)
 		}
 
@@ -188,7 +192,7 @@ func (m *Model) Get() <-chan error {
 
 	// Feed to work queue.
 	workQueue <- &work{
-		GET,
+		_GET,
 		m,
 		&q,
 	}
@@ -203,7 +207,7 @@ func (m *Model) Save() <-chan error {
 
 	// Feed to work queue.
 	workQueue <- &work{
-		PUT,
+		_PUT,
 		m,
 		&q,
 	}
@@ -218,7 +222,7 @@ func (m *Model) Delete() <-chan error {
 
 	// Feed to work queue.
 	workQueue <- &work{
-		DELETE,
+		_DELETE,
 		m,
 		&q,
 	}
